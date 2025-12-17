@@ -34,6 +34,7 @@ export interface User {
   vipLevel?: number;
   nameStyle?: string;
   bio?: string;
+  location?: string; // الحقل الجديد للعنوان
   gender?: 'male' | 'female';
   stats?: {
     likes: number;

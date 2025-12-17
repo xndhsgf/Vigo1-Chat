@@ -4,12 +4,12 @@ import { initializeFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCLwVqbIMVPHpO2bCFPNkNfi0Mpx2fmyS4",
-    authDomain: "pareil-pareil.firebaseapp.com",
-    projectId: "pareil-pareil",
-    storageBucket: "pareil-pareil.firebasestorage.app",
-    messagingSenderId: "369597939684",
-    appId: "1:369597939684:web:7f6151a88eead0555c11f1"
+    apiKey: "AIzaSyAy2d3Ig7edmX8iAhMFeMD40a-FAK8pbx0",
+    authDomain: "vigo1-chat.firebaseapp.com",
+    projectId: "vigo1-chat",
+    storageBucket: "vigo1-chat.firebasestorage.app",
+    messagingSenderId: "443895410846",
+    appId: "1:443895410846:web:31be459543e1160b0c4b8f"
 };
 
 // Initialize Firebase

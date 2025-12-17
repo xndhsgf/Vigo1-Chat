@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Home, User as UserIcon, Plus, Bell, Crown, Gem, Settings, ChevronRight, Edit3, Share2, LogOut, Shield, Database, ShoppingBag, Camera, Trophy, Flame, Sparkles, UserX, Star, ShieldCheck } from 'lucide-react';
+import { Home, User as UserIcon, Plus, Bell, Crown, Gem, Settings, ChevronRight, Edit3, Share2, LogOut, Shield, Database, ShoppingBag, Camera, Trophy, Flame, Sparkles, UserX, Star, ShieldCheck, MapPin } from 'lucide-react';
 import RoomCard from './components/RoomCard';
 import VoiceRoom from './components/VoiceRoom';
 import AuthScreen from './components/AuthScreen';
@@ -89,7 +89,6 @@ export default function App() {
   const handleAuth = (userData: User) => {
     setUser(userData);
     localStorage.setItem('voice_chat_user', JSON.stringify(userData));
-    // Optionally sync user to Firebase here
   };
 
   const handleLogout = () => {
@@ -97,6 +96,8 @@ export default function App() {
       setUser(null);
       setCurrentRoom(null);
       localStorage.removeItem('voice_chat_user');
+      addToast("تم تسجيل الخروج بنجاح", "info");
+      setActiveTab('home');
     }
   };
 
@@ -154,6 +155,8 @@ export default function App() {
     const newUser = { ...user, ...updatedData };
     setUser(newUser);
     localStorage.setItem('voice_chat_user', JSON.stringify(newUser));
+    // Also update in users list for UI consistency
+    setUsers(prev => prev.map(u => u.id === newUser.id ? newUser : u));
   };
 
   const addToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -395,6 +398,7 @@ export default function App() {
                 <div className="h-40 bg-slate-900 relative overflow-hidden">
                   {user.cover ? <img src={user.cover} className="w-full h-full object-cover" alt="Cover" /> : <div className="w-full h-full bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900"></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                  <button onClick={() => setShowEditProfileModal(true)} className="absolute top-4 left-4 p-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white active:scale-95 transition-transform"><Camera size={18} /></button>
                 </div>
                 <div className="px-5 pb-10">
                    <div className="relative -mt-10 mb-4 flex justify-between items-end">
@@ -414,8 +418,13 @@ export default function App() {
                         {user.name}
                         <span className="bg-amber-500 text-black text-[10px] px-2 py-0.5 rounded-full font-black">Lv.{user.level}</span>
                       </h2>
-                      <div className="mt-1 flex items-center gap-1">
+                      <div className="mt-1 flex flex-col gap-1">
                         <span className={`font-mono text-xs text-slate-400`}>ID: {user.customId || user.id}</span>
+                        {user.location && (
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <MapPin size={12} /> {user.location}
+                          </span>
+                        )}
                       </div>
                       <p className="text-slate-300 text-sm mt-3">{user.bio}</p>
                    </div>
@@ -435,6 +444,10 @@ export default function App() {
                           <ChevronRight size={16} className="text-slate-600" />
                         </div>
                       )}
+                      <div onClick={() => setShowEditProfileModal(true)} className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer">
+                        <div className="flex items-center gap-3"><Edit3 size={18} className="text-emerald-500" /><span className="text-sm font-medium">تعديل الملف الشخصي</span></div>
+                        <ChevronRight size={16} className="text-slate-600" />
+                      </div>
                       <div onClick={() => setShowVIPModal(true)} className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer">
                         <div className="flex items-center gap-3"><Crown size={18} className="text-amber-500" /><span className="text-sm font-medium">متجر VIP</span></div>
                         <ChevronRight size={16} className="text-slate-600" />

@@ -39,7 +39,7 @@ interface ComboState {
 const GIFT_MULTIPLIERS = [1, 10, 20, 50, 99, 100, 520, 999, 1314];
 
 const VoiceRoom: React.FC<VoiceRoomProps> = ({ 
-  room, onLeave, onMinimize, currentUser, gifts, gameSettings, onUpdateRoom, isMuted, onToggleMute, onUpdateUser, onAnnouncement, users, setUsers
+  room, onLeave, onMinimize, currentUser, gifts, gameSettings, onUpdateRoom, isMuted, onToggleMute, onUpdateUser, onAnnouncement, users, setUsers, onEditProfile
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -375,6 +375,10 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                onClose={() => setSelectedUser(null)} 
                onAction={(act, payload) => {
                   if (act === 'agencyTransfer') handleAgencyTransfer(payload);
+                  if (act === 'editProfile') {
+                      setSelectedUser(null);
+                      onEditProfile();
+                  }
                }} 
             />
          )}

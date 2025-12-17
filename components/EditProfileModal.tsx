@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Camera, Save, User as UserIcon, FileText, Image as ImageIcon } from 'lucide-react';
+import { X, Camera, Save, User as UserIcon, FileText, Image as ImageIcon, MapPin } from 'lucide-react';
 import { User } from '../types';
 
 interface EditProfileModalProps {
@@ -13,6 +14,7 @@ interface EditProfileModalProps {
 const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, currentUser, onSave }) => {
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio || '');
+  const [location, setLocation] = useState(currentUser.location || '');
   const [avatar, setAvatar] = useState(currentUser.avatar);
   const [cover, setCover] = useState(currentUser.cover || '');
 
@@ -21,6 +23,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
     if (isOpen) {
       setName(currentUser.name);
       setBio(currentUser.bio || '');
+      setLocation(currentUser.location || '');
       setAvatar(currentUser.avatar);
       setCover(currentUser.cover || '');
     }
@@ -49,6 +52,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
     onSave({
       name,
       bio,
+      location,
       avatar,
       cover
     });
@@ -120,6 +124,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 outline-none text-sm"
                       placeholder="أدخل اسمك"
+                   />
+                </div>
+
+                <div>
+                   <label className="text-xs text-slate-400 mb-1 flex items-center gap-1">
+                      <MapPin size={12} /> العنوان / الموقع
+                   </label>
+                   <input 
+                      type="text" 
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 outline-none text-sm"
+                      placeholder="المدينة، الدولة"
                    />
                 </div>
 
