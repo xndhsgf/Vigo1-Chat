@@ -41,6 +41,13 @@ export default function App() {
      wheelWinRate: 45,
      luckyGiftWinRate: 30,
      luckyGiftRefundPercent: 200,
+     luckyXEnabled: true,
+     luckyMultipliers: [
+        { label: 'X10', value: 10, chance: 70 },
+        { label: 'X50', value: 50, chance: 20 },
+        { label: 'X100', value: 100, chance: 8 },
+        { label: 'X500', value: 500, chance: 2 },
+     ],
      wheelJackpotX: 8,
      wheelNormalX: 2,
      slotsSevenX: 20,
@@ -77,6 +84,14 @@ export default function App() {
       setRooms(roomsData.length > 0 ? roomsData : MOCK_ROOMS);
     });
 
+    // Listen for VIP Levels from DB
+    const unsubVip = onSnapshot(doc(db, 'appSettings', 'vip'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.levels) setVipLevels(data.levels);
+      }
+    });
+
     // Handle Local Auth
     const savedUser = localStorage.getItem('voice_chat_user');
     if (savedUser) {
@@ -96,6 +111,7 @@ export default function App() {
       unsubSettings();
       unsubRooms();
       unsubUsers();
+      unsubVip();
     };
   }, []);
 
@@ -254,7 +270,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Rest of the UI remains same... */}
       <AnimatePresence>
         {showVIPModal && (
           <VIPModal 

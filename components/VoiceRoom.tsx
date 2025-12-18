@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Room, User, ChatMessage, Gift, UserLevel, GameSettings, GlobalAnnouncement } from '../types';
+import { Room, User, ChatMessage, Gift, UserLevel, GameSettings, GlobalAnnouncement, LuckyMultiplier } from '../types';
 import { Mic, MicOff, Gift as GiftIcon, X, Send, LayoutGrid, Gamepad2, Settings, ChevronDown, Clover, Sparkles, RotateCcw, LogOut, ShieldCheck, Gem, Timer, Zap, Eraser, Users as UsersIcon, UserMinus, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserProfileSheet from './UserProfileSheet';
@@ -39,7 +39,7 @@ interface ComboState {
 const GIFT_MULTIPLIERS = [1, 10, 20, 50, 99, 100, 520, 999, 1314];
 
 const VoiceRoom: React.FC<VoiceRoomProps> = ({ 
-  room, onLeave, onMinimize, currentUser, gifts, gameSettings, onUpdateRoom, isMuted, onToggleMute, onUpdateUser, onAnnouncement, users, setUsers, onEditProfile
+  room, onLeave, onMinimize, currentUser, gifts = [], gameSettings, onUpdateRoom, isMuted, onToggleMute, onUpdateUser, onAnnouncement, users = [], setUsers, onEditProfile
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -53,7 +53,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
   const [activeGiftEffect, setActiveGiftEffect] = useState<Gift | null>(null);
   const [giftRecipientId, setGiftRecipientId] = useState<string | null>(null);
   const [selectedGiftQuantity, setSelectedGiftQuantity] = useState(1);
-  const [lastSelectedGift, setLastSelectedGift] = useState<Gift | null>(gifts[0] || null);
+  const [lastSelectedGift, setLastSelectedGift] = useState<Gift | null>(gifts?.[0] || null);
   const [luckyWinAmount, setLuckyWinAmount] = useState<number>(0);
   
   const [comboState, setComboState] = useState<ComboState>({ gift: null, recipientId: null, timer: 0, count: 0, active: false });
@@ -65,16 +65,16 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const filteredGifts = useMemo(() => {
-    return gifts.filter(gift => {
+    return gifts?.filter(gift => {
       if (giftTab === 'lucky') return gift.isLucky || gift.category === 'lucky';
       if (giftTab === 'exclusive') return gift.category === 'exclusive';
       return gift.category === 'popular' || (!gift.category && !gift.isLucky);
-    });
+    }) || [];
   }, [gifts, giftTab]);
 
   useEffect(() => {
      const newSeats = new Array(8).fill(null);
-     room.speakers.forEach((speaker) => {
+     room.speakers?.forEach((speaker) => {
         const pos = speaker.seatIndex ?? -1;
         if (pos >= 0 && pos < 8) newSeats[pos] = speaker;
      });
@@ -134,7 +134,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
     const finalRecipientId = recipientId || giftRecipientId;
     let recipientName = 'الجميع';
     if (finalRecipientId) {
-       const targetUser = room.speakers.find(s => s.id === finalRecipientId);
+       const targetUser = room.speakers?.find(s => s.id === finalRecipientId);
        if (targetUser) recipientName = targetUser.name;
     }
     setComboState(prev => ({ gift, recipientId: finalRecipientId, timer: 5, count: isCombo ? prev.count + 1 : 1, active: true }));
@@ -143,25 +143,51 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
     
     let refundAmount = 0;
     let isLuckyWin = false;
+    let winMultiplierLabel = "";
+
     if (gift.isLucky && Math.random() * 100 < gameSettings.luckyGiftWinRate) {
         isLuckyWin = true;
-        refundAmount = Math.floor(totalCost * (gameSettings.luckyGiftRefundPercent / 100));
+        
+        // Logical check for "X" Multipliers
+        if (gameSettings.luckyXEnabled && gameSettings.luckyMultipliers && gameSettings.luckyMultipliers.length > 0) {
+           // Weighted Random Selection
+           const roll = Math.random() * 100;
+           let accumulated = 0;
+           let selectedMul = gameSettings.luckyMultipliers[0];
+           
+           for (const m of gameSettings.luckyMultipliers) {
+              accumulated += m.chance;
+              if (roll <= accumulated) {
+                 selectedMul = m;
+                 break;
+              }
+           }
+           refundAmount = totalCost * selectedMul.value;
+           winMultiplierLabel = selectedMul.label;
+        } else {
+           // Fallback to simple refund percent
+           refundAmount = Math.floor(totalCost * (gameSettings.luckyGiftRefundPercent / 100));
+        }
+        
         setLuckyWinAmount(refundAmount);
         setTimeout(() => setLuckyWinAmount(0), 4000);
     }
 
     onUpdateUser({ coins: currentUser.coins - totalCost + refundAmount, wealth: (currentUser.wealth || 0) + totalCost });
     if (finalRecipientId) {
-       const updatedSpeakers = room.speakers.map(s => s.id === finalRecipientId ? { ...s, charm: (s.charm || 0) + totalCost } : s);
+       const updatedSpeakers = (room.speakers || []).map(s => s.id === finalRecipientId ? { ...s, charm: (s.charm || 0) + totalCost } : s);
        onUpdateRoom(room.id, { speakers: updatedSpeakers });
     }
+    
+    const winText = winMultiplierLabel ? `ربح مضاعف ${winMultiplierLabel} (${refundAmount.toLocaleString()} كوينز)!` : `ربح ${refundAmount.toLocaleString()} كوينز!`;
+
     const giftMsg: ChatMessage = {
       id: Date.now().toString(),
       userId: currentUser.id,
       userName: currentUser.name,
       userLevel: currentUser.level,
       userNameStyle: currentUser.nameStyle || '',
-      content: isLuckyWin ? `ربح ${refundAmount.toLocaleString()} كوينز من ${gift.name}! 🍀` : `أرسل ${gift.name} x${quantity} إلى ${recipientName}`,
+      content: isLuckyWin ? `${winText} من ${gift.name} 🍀` : `أرسل ${gift.name} x${quantity} إلى ${recipientName}`,
       type: 'gift', giftData: gift, isLuckyWin, winAmount: refundAmount
     };
     setMessages(prev => [...prev, giftMsg]);
@@ -181,7 +207,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
     if (oldSeatIndex !== -1) newLocalSeats[oldSeatIndex] = null;
     newLocalSeats[index] = { ...currentUser, seatIndex: index, isMuted: isMuted };
     setLocalSeats(newLocalSeats);
-    const updatedSpeakersList = room.speakers.filter(s => s.id !== currentUser.id);
+    const updatedSpeakersList = (room.speakers || []).filter(s => s.id !== currentUser.id);
     updatedSpeakersList.push({ ...currentUser, seatIndex: index, isMuted: isMuted });
     onUpdateRoom(room.id, { speakers: updatedSpeakersList });
   };
@@ -191,7 +217,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
     const oldSeatIndex = localSeats.findIndex(s => s?.id === currentUser.id);
     if (oldSeatIndex !== -1) newLocalSeats[oldSeatIndex] = null;
     setLocalSeats(newLocalSeats);
-    const updatedSpeakersList = room.speakers.filter(s => s.id !== currentUser.id);
+    const updatedSpeakersList = (room.speakers || []).filter(s => s.id !== currentUser.id);
     onUpdateRoom(room.id, { speakers: updatedSpeakersList });
     setShowMenuModal(false);
     addToast('لقد غادرت الميكروفون', 'info');
@@ -211,9 +237,9 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
   };
 
   const bgStyle = useMemo(() => {
-    const isImageUrl = room.background.startsWith('http') || room.background.startsWith('data:image');
+    const isImageUrl = room.background?.startsWith('http') || room.background?.startsWith('data:image');
     if (isImageUrl) return { backgroundImage: `url(${room.background})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-    return { background: room.background };
+    return { background: room.background || '#0f172a' };
   }, [room.background]);
 
   return (
@@ -241,7 +267,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
          </div>
          <div className="bg-black/40 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2 shadow-lg">
             <UsersIcon size={12} className="text-emerald-400" />
-            <span className="text-xs font-black text-white">{room.listeners}</span>
+            <span className="text-xs font-black text-white">{room.listeners || 0}</span>
          </div>
       </div>
 
@@ -262,7 +288,6 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                              {speaker.isMuted && <MicOff size={10} className="text-red-500 mr-0.5" />}
                              <span className="text-[10px] text-white font-black tracking-tighter italic">{(speaker.charm || 0).toLocaleString()}</span>
                            </div>
-                           {/* Talking Glow */}
                            {!speaker.isMuted && <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping -z-10"></div>}
                         </div>
                      ) : (
@@ -282,7 +307,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                   {msg.type === 'gift' ? (
                      <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="rounded-2xl p-2 pr-5 pl-2.5 flex items-center gap-3 bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
                         <div className="w-10 h-10 rounded-xl bg-black/40 p-1.5 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">{renderGiftIcon(msg.giftData?.icon || '')}</div>
-                        <div className="flex flex-col"><div className="flex items-center gap-2"><span className={`text-xs font-black ${msg.userNameStyle || 'text-amber-400'}`}>{msg.userName}</span><span className="text-[10px] text-white/40">أرسل {msg.giftData?.name}</span></div><span className="text-[10px] text-white/80 font-bold">{msg.isLuckyWin && <span className="text-green-400 italic">🍀 ربح {msg.winAmount?.toLocaleString()}</span>}</span></div>
+                        <div className="flex flex-col"><div className="flex items-center gap-2"><span className={`text-xs font-black ${msg.userNameStyle || 'text-amber-400'}`}>{msg.userName}</span><span className="text-[10px] text-white/40">أرسل {msg.giftData?.name}</span></div><span className="text-[10px] text-white/80 font-bold">{msg.isLuckyWin && <span className="text-green-400 italic">🍀 {msg.content}</span>}</span></div>
                      </motion.div>
                    ) : msg.type === 'system' ? (
                      <div className="bg-blue-600/10 border border-blue-500/20 rounded-xl px-5 py-2 text-[11px] text-blue-300 italic font-black w-max max-w-full text-center mx-auto my-1.5 shadow-lg shadow-blue-900/10">{msg.content}</div>
@@ -290,7 +315,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                      <div className="flex items-start gap-2.5 max-w-[92%]">
                         <div className="mt-1.5 px-2 rounded-lg bg-slate-800 text-slate-300 text-[9px] font-black h-4.5 flex items-center border border-white/5 shadow-sm">Lv.{msg.userLevel}</div>
                         <div className="flex flex-col">
-                          <span onClick={() => { const target = room.speakers.find(s => s.id === msg.userId) || users.find(u => u.id === msg.userId); if (target) setSelectedUser(target); }} className={`text-[10px] mb-0.5 cursor-pointer hover:underline font-bold ${msg.userNameStyle || 'text-slate-400'}`}>{msg.userName}</span>
+                          <span onClick={() => { const target = room.speakers?.find(s => s.id === msg.userId) || users.find(u => u.id === msg.userId); if (target) setSelectedUser(target); }} className={`text-[10px] mb-0.5 cursor-pointer hover:underline font-bold ${msg.userNameStyle || 'text-slate-400'}`}>{msg.userName}</span>
                           <div className="rounded-[1.25rem] rounded-tr-none px-4 py-2 text-xs text-white bg-white/10 backdrop-blur-md border border-white/10 shadow-lg leading-relaxed" style={msg.bubbleUrl ? { backgroundImage: `url(${msg.bubbleUrl})`, backgroundSize: 'cover' } : {}}>{msg.content}</div>
                         </div>
                      </div>
@@ -300,7 +325,6 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
             <div ref={messagesEndRef} />
          </div>
 
-         {/* The Four Squares Bottom Bar */}
          <div className="flex items-center gap-2.5 mt-2">
             <div className="flex-1 bg-white/5 backdrop-blur-2xl rounded-2xl h-14 flex items-center px-5 border border-white/10 shadow-2xl group transition-all focus-within:bg-white/10">
                 <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="قل شيئاً جميلاً..." className="bg-transparent text-white w-full outline-none text-sm text-right placeholder-white/20 font-medium" />
@@ -308,7 +332,6 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
             </div>
             
             <div className="flex items-center gap-2 shrink-0 relative">
-                {/* Combo Button */}
                 <AnimatePresence>
                     {comboState.active && (
                        <motion.div initial={{ scale: 0, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} className="absolute -top-16 left-8 flex flex-col items-center justify-center z-[70]">
@@ -322,22 +345,15 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                 </AnimatePresence>
 
                 <div className="grid grid-cols-4 gap-2">
-                   {/* 1. Mic Square */}
                    <button onClick={onToggleMute} className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all active:scale-90 shadow-xl ${isMuted ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 shadow-blue-900/50'}`}>
                       {isMuted ? <MicOff size={22} strokeWidth={2.5} /> : <Mic size={22} strokeWidth={2.5} />}
                    </button>
-                   
-                   {/* 2. Gift Square */}
                    <button onClick={() => setShowGiftModal(true)} className="w-12 h-12 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 rounded-2xl text-white shadow-xl shadow-purple-900/40 flex items-center justify-center border border-white/20 active:scale-90 transition-all">
                       <GiftIcon size={22} strokeWidth={2.5} />
                    </button>
-
-                   {/* 3. Games Square */}
                    <button onClick={() => setShowGameCenter(true)} className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl text-white shadow-xl shadow-emerald-900/40 flex items-center justify-center border border-white/20 active:scale-90 transition-all">
                       <Gamepad2 size={22} strokeWidth={2.5} />
                    </button>
-
-                   {/* 4. Menu Square */}
                    <button onClick={() => setShowMenuModal(true)} className="w-12 h-12 bg-slate-800/80 backdrop-blur-xl rounded-2xl text-white border border-white/10 flex items-center justify-center shadow-xl active:scale-90 transition-all hover:bg-slate-700">
                       <Menu size={22} strokeWidth={2.5} />
                    </button>
@@ -365,7 +381,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                         <span className="text-[10px] font-black text-white">ترك المايك</span>
                      </button>
                      <button onClick={() => {
-                         const resetSpeakers = room.speakers.map(s => ({ ...s, charm: 0 }));
+                         const resetSpeakers = (room.speakers || []).map(s => ({ ...s, charm: 0 }));
                          onUpdateRoom(room.id, { speakers: resetSpeakers });
                          addToast('تم تصفير الكاريزما', 'success');
                          setShowMenuModal(false);
@@ -416,7 +432,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                            <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-slate-900 border-2 transition-all ${giftRecipientId === null ? 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'border-white/10'}`}><UsersIcon size={22} className="text-white" /></div>
                            <span className="text-[10px] font-black text-white">الجميع</span>
                         </button>
-                        {room.speakers.map((speaker) => (
+                        {room.speakers?.map((speaker) => (
                            <button key={speaker.id} onClick={() => setGiftRecipientId(speaker.id)} className={`flex flex-col items-center gap-2 shrink-0 transition-all ${giftRecipientId === speaker.id ? 'scale-110' : 'opacity-40 grayscale'}`}>
                               <div className={`w-14 h-14 rounded-full relative p-0.5 border-2 transition-all ${giftRecipientId === speaker.id ? 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'border-white/10'}`}><img src={speaker.avatar} className="w-full h-full rounded-full object-cover" alt="" /></div>
                               <span className="text-[10px] font-black text-white truncate w-14 text-center">{speaker.name}</span>

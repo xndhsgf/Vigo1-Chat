@@ -34,7 +34,7 @@ export interface User {
   vipLevel?: number;
   nameStyle?: string;
   bio?: string;
-  location?: string; // الحقل الجديد للعنوان
+  location?: string;
   gender?: 'male' | 'female';
   stats?: {
     likes: number;
@@ -48,10 +48,10 @@ export interface User {
   isSpecialId?: boolean;
   isAdmin?: boolean;
   isBanned?: boolean;
-  banUntil?: string; // ISO Date or 'permanent'
+  banUntil?: string;
   seatIndex?: number;
   status?: string;
-  agencyBalance?: number; // رصيد الوكالة الخاص بالشحن
+  agencyBalance?: number;
 }
 
 export interface GlobalAnnouncement {
@@ -111,11 +111,19 @@ export interface Room {
   background: string;
 }
 
+export interface LuckyMultiplier {
+  label: string;
+  value: number;
+  chance: number; // Percentage 0-100
+}
+
 export interface GameSettings {
   slotsWinRate: number;
   wheelWinRate: number;
   luckyGiftWinRate: number;
   luckyGiftRefundPercent: number;
+  luckyXEnabled: boolean;
+  luckyMultipliers: LuckyMultiplier[];
   wheelJackpotX: number; 
   wheelNormalX: number;   
   slotsSevenX: number;    

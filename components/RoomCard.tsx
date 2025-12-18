@@ -9,10 +9,12 @@ interface RoomCardProps {
 }
 
 const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
-  const host = room.speakers[0];
+  // Safe access using optional chaining
+  const host = room.speakers?.[0];
   
   const idDisplay = useMemo(() => {
-     if (!host?.isSpecialId) return <span className="text-slate-400">ID: {host?.customId || host?.id}</span>;
+     if (!host) return <span className="text-slate-500 text-[8px]">ID: ---</span>;
+     if (!host.isSpecialId) return <span className="text-slate-400">ID: {host.customId || host.id}</span>;
      
      const id = host.customId || 0;
      const styles = [
@@ -38,7 +40,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
            <Sparkles size={8} />
         </span>
      );
-  }, [host?.customId, host?.id, host?.isSpecialId]);
+  }, [host]);
 
   return (
     <div 
@@ -54,7 +56,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
         <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
                 <div className="w-14 h-14 rounded-xl p-[2px] bg-gradient-to-br from-amber-400 to-orange-600 shadow-lg shadow-orange-900/30">
-                    <img src={host?.avatar} className="w-full h-full rounded-[10px] object-cover" alt="Host" />
+                    <img src={host?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=host'} className="w-full h-full rounded-[10px] object-cover" alt="Host" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 bg-black/60 backdrop-blur rounded-md p-0.5 border border-white/10 flex items-center gap-0.5">
                     <div className="w-0.5 h-1.5 bg-green-500 animate-[bounce_1s_infinite]"></div>
@@ -72,7 +74,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
                 </div>
                 
                 <div className="flex items-center gap-1.5">
-                    <span className="text-amber-400 font-bold text-[10px]">{host?.name}</span>
+                    <span className="text-amber-400 font-bold text-[10px]">{host?.name || 'غرفة جديدة'}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-500"></span>
                     {idDisplay}
                 </div>
@@ -80,12 +82,12 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
                 <div className="flex items-center gap-2 mt-1">
                     <div className="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-full border border-white/5 text-[9px] text-slate-300">
                         <Users size={9} className="text-blue-400" />
-                        <span>{room.listeners}</span>
+                        <span>{room.listeners || 0}</span>
                     </div>
-                    {room.speakers.length > 1 && (
+                    {(room.speakers?.length || 0) > 1 && (
                          <div className="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-full border border-white/5 text-[9px] text-slate-300">
                             <Mic size={9} className="text-green-400" />
-                            <span>{room.speakers.length}</span>
+                            <span>{room.speakers?.length}</span>
                         </div>
                     )}
                 </div>
