@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Room } from '../types';
-import { Users, Mic, BarChart2, Sparkles } from 'lucide-react';
+import { Users, Mic, BarChart2, Sparkles, Crown, Zap, Heart, Gem } from 'lucide-react';
 
 interface RoomCardProps {
   room: Room;
@@ -11,41 +11,51 @@ interface RoomCardProps {
 const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
   const host = room.speakers[0];
   
-  const idStyle = useMemo(() => {
-     if (!host?.isSpecialId) return "text-slate-300";
+  const idDisplay = useMemo(() => {
+     if (!host?.isSpecialId) return <span className="text-slate-400">ID: {host?.customId || host?.id}</span>;
+     
      const id = host.customId || 0;
-     const colors = [
-        "text-amber-400 font-black drop-shadow-sm animate-pulse",
-        "text-cyan-400 font-black",
-        "text-pink-400 font-black",
-        "text-emerald-400 font-black",
-        "text-purple-400 font-black"
+     const styles = [
+        "bg-amber-500 text-black px-1.5 rounded text-[8px] font-black",
+        "bg-cyan-500 text-white px-1.5 rounded-full text-[8px] font-black italic",
+        "border border-pink-500 text-pink-500 px-1.5 rounded text-[8px] font-black animate-pulse",
+        "bg-emerald-500 text-white px-1.5 rounded-tr-lg rounded-bl-lg text-[8px] font-black",
+        "bg-purple-600 text-white px-1.5 rounded text-[8px] font-black shadow-lg",
+        "bg-white text-black px-1.5 rounded-sm text-[8px] font-black transform skew-x-6",
+        "bg-red-600 text-white px-1.5 rounded-full text-[8px] font-black",
+        "bg-gradient-to-r from-orange-400 to-rose-600 text-white px-1.5 rounded text-[8px] font-black",
+        "bg-amber-100 border border-amber-600 text-amber-800 px-1.5 rounded-full text-[8px] font-black",
+        "bg-blue-900 text-cyan-300 px-1.5 rounded text-[8px] font-black border-b-2 border-cyan-400",
+        "bg-slate-700 text-white px-1.5 rounded text-[8px] font-black italic",
+        "bg-pink-500 text-white px-1.5 rounded-full text-[8px] font-black animate-bounce"
      ];
-     return colors[id % colors.length];
-  }, [host?.customId, host?.isSpecialId]);
+
+     const selectedClass = styles[id % styles.length];
+     
+     return (
+        <span className={`${selectedClass} flex items-center gap-0.5`}>
+           ID: {id}
+           <Sparkles size={8} />
+        </span>
+     );
+  }, [host?.customId, host?.id, host?.isSpecialId]);
 
   return (
     <div 
       onClick={() => onClick(room)}
       className="relative w-full h-24 bg-slate-800/50 rounded-2xl overflow-hidden border border-white/5 active:scale-95 transition-all duration-200 cursor-pointer group shadow-lg"
     >
-      {/* Background Image with Blur/Darken */}
       <div className="absolute inset-0">
         <img src={room.thumbnail} alt={room.title} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/80 to-transparent"></div>
       </div>
 
-      {/* Content Container */}
       <div className="absolute inset-0 p-2 flex justify-between items-center">
-        
-        {/* Right Side: Info */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Host Avatar (Square with rounded corners + Border) */}
             <div className="relative flex-shrink-0">
                 <div className="w-14 h-14 rounded-xl p-[2px] bg-gradient-to-br from-amber-400 to-orange-600 shadow-lg shadow-orange-900/30">
                     <img src={host?.avatar} className="w-full h-full rounded-[10px] object-cover" alt="Host" />
                 </div>
-                {/* Live Animation Icon */}
                 <div className="absolute -bottom-1 -right-1 bg-black/60 backdrop-blur rounded-md p-0.5 border border-white/10 flex items-center gap-0.5">
                     <div className="w-0.5 h-1.5 bg-green-500 animate-[bounce_1s_infinite]"></div>
                     <div className="w-0.5 h-2.5 bg-green-500 animate-[bounce_1.2s_infinite]"></div>
@@ -53,7 +63,6 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
                 </div>
             </div>
 
-            {/* Texts */}
             <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-2">
                     <h3 className="font-bold text-white text-sm truncate leading-tight">{room.title}</h3>
@@ -62,16 +71,12 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
                     </span>
                 </div>
                 
-                <p className="text-[9px] flex items-center gap-1 truncate">
-                    <span className="text-amber-400 font-bold">{host?.name}</span>
+                <div className="flex items-center gap-1.5">
+                    <span className="text-amber-400 font-bold text-[10px]">{host?.name}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-500"></span>
-                    <span className={idStyle}>
-                        ID: {host?.customId || host?.id}
-                        {host?.isSpecialId && <Sparkles size={8} className="inline ml-0.5" />}
-                    </span>
-                </p>
+                    {idDisplay}
+                </div>
 
-                {/* Tags / Mini Info */}
                 <div className="flex items-center gap-2 mt-1">
                     <div className="flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-full border border-white/5 text-[9px] text-slate-300">
                         <Users size={9} className="text-blue-400" />
@@ -87,13 +92,11 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
             </div>
         </div>
 
-        {/* Left Side: Enter Button (Visual Cue) */}
         <div className="flex-shrink-0 ml-2">
              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10 group-hover:bg-amber-500 group-hover:text-black transition-colors">
                 <BarChart2 size={14} className="-rotate-90" />
              </div>
         </div>
-
       </div>
     </div>
   );

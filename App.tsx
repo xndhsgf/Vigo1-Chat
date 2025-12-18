@@ -16,7 +16,7 @@ import { MOCK_ROOMS, VIP_LEVELS, GIFTS as INITIAL_GIFTS, STORE_ITEMS, MOCK_CONTR
 import { Room, User, VIPPackage, UserLevel, Gift, StoreItem, GameSettings, GlobalAnnouncement } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { db } from './services/firebase';
-import { collection, onSnapshot, doc, setDoc, updateDoc, query, orderBy, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, query, orderBy, addDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 export default function App() {
   const [initializing, setInitializing] = useState(true);
@@ -27,14 +27,13 @@ export default function App() {
   
   // Local Data State
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([CURRENT_USER, ...MOCK_ROOMS.flatMap(r => r.speakers)]);
+  const [users, setUsers] = useState<User[]>([CURRENT_USER]);
   const [rooms, setRooms] = useState<Room[]>([]); 
   const [gifts, setGifts] = useState<Gift[]>(INITIAL_GIFTS);
   const [storeItems, setStoreItems] = useState<StoreItem[]>(STORE_ITEMS);
   const [vipLevels, setVipLevels] = useState<VIPPackage[]>(VIP_LEVELS);
   const [announcement, setAnnouncement] = useState<GlobalAnnouncement | null>(null);
   
-  // App Global Settings (Banner)
   const [appBanner, setAppBanner] = useState('https://img.freepik.com/free-vector/gradient-music-festival-twitch-banner_23-2149051838.jpg');
 
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -55,15 +54,20 @@ export default function App() {
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  // 1. Firebase Listeners
   useEffect(() => {
-    // Listen for Global Settings (Banner, Win Rates)
+    // Listen for Global Settings
     const unsubSettings = onSnapshot(doc(db, 'appSettings', 'global'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.appBanner) setAppBanner(data.appBanner);
         if (data.gameSettings) setGameSettings(data.gameSettings);
       }
+    });
+
+    // Listen for All Users
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        if (usersData.length > 0) setUsers(usersData);
     });
 
     // Listen for Rooms
@@ -76,19 +80,42 @@ export default function App() {
     // Handle Local Auth
     const savedUser = localStorage.getItem('voice_chat_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      getDoc(doc(db, 'users', parsedUser.id)).then((docSnap) => {
+        if (docSnap.exists()) {
+          const freshUser = docSnap.data() as User;
+          setUser(freshUser);
+          localStorage.setItem('voice_chat_user', JSON.stringify(freshUser));
+        }
+      });
     }
     
     setInitializing(false);
     return () => {
       unsubSettings();
       unsubRooms();
+      unsubUsers();
     };
   }, []);
 
-  const handleAuth = (userData: User) => {
+  const handleAdminUpdateUser = async (userId: string, data: Partial<User>) => {
+    try {
+        await setDoc(doc(db, 'users', userId), data, { merge: true });
+    } catch (err) {
+        console.error("Cloud update failed:", err);
+        addToast("فشل تحديث البيانات في السحابة", "error");
+    }
+  };
+
+  const handleAuth = async (userData: User) => {
     setUser(userData);
     localStorage.setItem('voice_chat_user', JSON.stringify(userData));
+    try {
+      await setDoc(doc(db, 'users', userData.id), userData, { merge: true });
+    } catch (err) {
+      console.error("Failed to sync user on auth", err);
+    }
   };
 
   const handleLogout = () => {
@@ -103,16 +130,7 @@ export default function App() {
 
   const handleCreateRoom = async (roomData: any) => {
     if (!user) return;
-    const newRoom = {
-      ...roomData,
-      hostId: user.id,
-      listeners: 1,
-      speakers: [{
-        ...user,
-        seatIndex: 0
-      }]
-    };
-
+    const newRoom = { ...roomData, hostId: user.id, listeners: 1, speakers: [{ ...user, seatIndex: 0 }] };
     try {
       await addDoc(collection(db, 'rooms'), newRoom);
       addToast("تم إنشاء الغرفة بنجاح! 🎙️", "success");
@@ -124,13 +142,22 @@ export default function App() {
 
   const handleUpdateRoom = async (roomId: string, data: Partial<Room>) => {
     try {
-      await updateDoc(doc(db, 'rooms', roomId), data);
+      await setDoc(doc(db, 'rooms', roomId), data, { merge: true });
     } catch (error) {
       console.error("Error updating room:", error);
     }
   };
 
-  const handleRoomJoin = (room: Room) => {
+  const handleDeleteRoom = async (roomId: string) => {
+    try {
+      await deleteDoc(doc(db, 'rooms', roomId));
+      addToast("تم حذف الغرفة بنجاح", "success");
+    } catch (error) {
+      addToast("فشل حذف الغرفة", "error");
+    }
+  };
+
+  const handleRoomJoin = async (room: Room) => {
     if (!user) return;
     if (user.isBanned) {
       addToast("عذراً، حسابك محظور من دخول الغرف!", "error");
@@ -139,24 +166,27 @@ export default function App() {
     setCurrentRoom(room);
     setIsRoomMinimized(false);
     setIsUserMuted(true);
-    handleUpdateRoom(room.id, { listeners: room.listeners + 1 });
+    await handleUpdateRoom(room.id, { listeners: (room.listeners || 0) + 1 });
   };
 
   const handleRoomLeave = () => {
     if (currentRoom) {
-      handleUpdateRoom(currentRoom.id, { listeners: Math.max(0, currentRoom.listeners - 1) });
+      handleUpdateRoom(currentRoom.id, { listeners: Math.max(0, (currentRoom.listeners || 1) - 1) });
     }
     setCurrentRoom(null);
     setIsRoomMinimized(false);
   };
 
-  const handleUpdateUser = (updatedData: Partial<User>) => {
+  const handleUpdateUser = async (updatedData: Partial<User>) => {
     if (!user) return;
     const newUser = { ...user, ...updatedData };
     setUser(newUser);
     localStorage.setItem('voice_chat_user', JSON.stringify(newUser));
-    // Also update in users list for UI consistency
-    setUsers(prev => prev.map(u => u.id === newUser.id ? newUser : u));
+    try {
+      await setDoc(doc(db, 'users', user.id), updatedData, { merge: true });
+    } catch (err) {
+      console.error("Failed to sync user data to cloud", err);
+    }
   };
 
   const addToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -205,9 +235,11 @@ export default function App() {
             onClose={() => setShowAdminPanel(false)}
             currentUser={user}
             users={users}
-            setUsers={setUsers}
+            onUpdateUser={handleAdminUpdateUser}
             rooms={rooms}
             setRooms={setRooms}
+            onUpdateRoom={handleUpdateRoom}
+            onDeleteRoom={handleDeleteRoom}
             gifts={gifts}
             setGifts={setGifts}
             storeItems={storeItems}
@@ -222,6 +254,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Rest of the UI remains same... */}
       <AnimatePresence>
         {showVIPModal && (
           <VIPModal 
