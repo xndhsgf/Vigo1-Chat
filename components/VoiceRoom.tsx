@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Room, User, ChatMessage, Gift, UserLevel, GameSettings, GlobalAnnouncement, LuckyMultiplier } from '../types';
-import { Mic, MicOff, Gift as GiftIcon, X, Send, LayoutGrid, Gamepad2, Settings, ChevronDown, Clover, Sparkles, RotateCcw, LogOut, ShieldCheck, Gem, Timer, Zap, Eraser, Users as UsersIcon, UserMinus, Menu } from 'lucide-react';
+import { Mic, MicOff, Gift as GiftIcon, X, Send, LayoutGrid, Gamepad2, Settings, ChevronDown, Clover, Sparkles, RotateCcw, LogOut, ShieldCheck, Gem, Timer, Zap, Eraser, Users as UsersIcon, UserMinus, Menu, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserProfileSheet from './UserProfileSheet';
 import Toast, { ToastMessage } from './Toast';
@@ -148,9 +148,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
     if (gift.isLucky && Math.random() * 100 < gameSettings.luckyGiftWinRate) {
         isLuckyWin = true;
         
-        // Logical check for "X" Multipliers
         if (gameSettings.luckyXEnabled && gameSettings.luckyMultipliers && gameSettings.luckyMultipliers.length > 0) {
-           // Weighted Random Selection
            const roll = Math.random() * 100;
            let accumulated = 0;
            let selectedMul = gameSettings.luckyMultipliers[0];
@@ -165,7 +163,6 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
            refundAmount = totalCost * selectedMul.value;
            winMultiplierLabel = selectedMul.label;
         } else {
-           // Fallback to simple refund percent
            refundAmount = Math.floor(totalCost * (gameSettings.luckyGiftRefundPercent / 100));
         }
         
@@ -271,27 +268,58 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
          </div>
       </div>
 
-      {/* Speakers Grid */}
+      {/* Speakers Grid - الاحترافي الجديد مع إزالة الميوت وتنسيق معلومات السيرفر */}
       <div className="flex-1 px-4 overflow-y-auto mt-6 scrollbar-hide">
-         <div className="grid grid-cols-4 gap-x-2 gap-y-12">
+         <div className="grid grid-cols-4 gap-x-2 gap-y-24 pt-4">
             {localSeats.map((speaker, index) => (
                <div key={index} className="flex flex-col items-center relative">
                   <button onClick={() => handleSeatClick(index)} className="relative w-16 h-16 rounded-full flex items-center justify-center transition-transform active:scale-90 group">
                      {speaker ? (
-                        <div className="relative w-full h-full flex items-center justify-center">
-                           <div className={`w-[86%] h-[86%] rounded-full overflow-hidden ${!speaker.frame ? 'p-1 bg-gradient-to-tr from-blue-400 to-cyan-300 shadow-lg shadow-blue-900/40' : ''}`}>
-                             <img src={speaker.avatar} className="w-full h-full rounded-full object-cover" />
+                        <div className="relative w-full h-full flex flex-col items-center">
+                           {/* توهج احترافي عند التحدث فقط */}
+                           {!speaker.isMuted && (
+                              <>
+                                 <div className="absolute inset-0 bg-cyan-500/40 rounded-full animate-ping -z-10 blur-sm scale-110"></div>
+                                 <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-pulse -z-10 blur-md scale-125"></div>
+                              </>
+                           )}
+                           
+                           <div className="relative w-full h-full flex items-center justify-center z-10">
+                              {/* صورة المستخدم بإطار نظيف */}
+                              <div className={`w-[88%] h-[88%] rounded-full overflow-hidden transition-all duration-500 ${!speaker.frame ? 'p-[3px] bg-gradient-to-tr from-slate-700 to-slate-800 shadow-2xl border border-white/5' : ''}`}>
+                                <img src={speaker.avatar} className="w-full h-full rounded-full object-cover shadow-inner" />
+                              </div>
+                              
+                              {/* الإطار الملكي */}
+                              {speaker.frame && <img src={speaker.frame} className="absolute inset-0 w-full h-full object-contain z-20 scale-[1.32] drop-shadow-2xl pointer-events-none" />}
+                              
+                              {/* ملاحظة: تم إزالة أيقونة الميوت الحمراء تماماً كما طلبت */}
                            </div>
-                           {speaker.frame && <img src={speaker.frame} className="absolute inset-0 w-full h-full object-contain z-20 scale-[1.3] drop-shadow-xl" />}
-                           <div className="absolute -bottom-5 w-full text-center"><span className="text-[10px] bg-black/60 backdrop-blur-md px-2.5 py-0.5 rounded-full truncate max-w-[120%] border border-white/10 text-white font-bold">{speaker.name}</span></div>
-                           <div className="absolute -bottom-10 flex items-center gap-1 bg-black/70 px-2 py-0.5 rounded-full border border-pink-500/30 shadow-lg">
-                             {speaker.isMuted && <MicOff size={10} className="text-red-500 mr-0.5" />}
-                             <span className="text-[10px] text-white font-black tracking-tighter italic">{(speaker.charm || 0).toLocaleString()}</span>
+
+                           {/* معلومات السيرفر تحت الصورة بشكل رأسي متناسق */}
+                           <div className="absolute -bottom-16 flex flex-col items-center gap-1.5 w-full">
+                              {/* اسم المستخدم - مربوط بألوان السيرفر VIP */}
+                              <div className="w-max max-w-[85px] text-center px-1">
+                                 <span className={`text-[10px] font-black truncate block drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${speaker.nameStyle || 'text-white'}`}>
+                                    {speaker.name}
+                                 </span>
+                              </div>
+
+                              {/* عداد الكاريزما - مربوط بسيرفر التصفير */}
+                              <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-2xl px-2.5 py-0.5 rounded-full border border-pink-500/20 shadow-2xl min-w-[48px] justify-center">
+                                 <Sparkles size={9} className="text-pink-400 animate-pulse" />
+                                 <span className="text-[10px] text-white font-black italic tracking-tighter leading-none">
+                                    {(speaker.charm || 0).toLocaleString()}
+                                 </span>
+                              </div>
                            </div>
-                           {!speaker.isMuted && <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping -z-10"></div>}
                         </div>
                      ) : (
-                        <div className="relative w-full h-full flex items-center justify-center rounded-full bg-black/30 border-2 border-dashed border-white/10 group-hover:border-white/30 transition-all hover:bg-black/40"><Mic size={20} className="text-white/20" /></div>
+                        /* تصميم المقعد الفارغ الاحترافي الجديد */
+                        <div className="relative w-full h-full flex items-center justify-center rounded-full bg-slate-900/40 border-2 border-dashed border-white/5 group-hover:bg-white/5 group-hover:border-white/10 transition-all hover:scale-105 shadow-inner overflow-hidden">
+                           <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-20"></div>
+                           <div className="w-3 h-3 rounded-full bg-slate-800 shadow-lg border border-white/5"></div>
+                        </div>
                      )}
                   </button>
                </div>
@@ -383,7 +411,7 @@ const VoiceRoom: React.FC<VoiceRoomProps> = ({
                      <button onClick={() => {
                          const resetSpeakers = (room.speakers || []).map(s => ({ ...s, charm: 0 }));
                          onUpdateRoom(room.id, { speakers: resetSpeakers });
-                         addToast('تم تصفير الكاريزما', 'success');
+                         addToast('تم تصفير الكاريزما بنجاح ✅', 'success');
                          setShowMenuModal(false);
                      }} className="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
                         <div className="p-2 bg-amber-600/20 text-amber-500 rounded-lg"><RotateCcw size={20}/></div>
