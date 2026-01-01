@@ -8,7 +8,7 @@ export enum UserLevel {
   VIP = 'VIP'
 }
 
-export type ItemType = 'frame' | 'bubble';
+export type ItemType = 'frame' | 'bubble' | 'entry' | 'badge' | 'extra';
 
 export interface StoreItem {
   id: string;
@@ -20,19 +20,26 @@ export interface StoreItem {
 
 export interface User {
   id: string;
-  customId: number;
+  customId: any; 
   name: string;
   avatar: string;
   level: UserLevel;
+  wealthLevel?: number;
+  rechargeLevel?: number;
+  rechargePoints?: number;
   frame?: string;
   activeBubble?: string;
+  badge?: string;
+  achievements?: string[];
   cover?: string;
-  coins: number;
-  wealth: number;
-  charm: number;
+  coins: any;
+  diamonds: any; 
+  wealth: any;
+  charm: any;
   isVip: boolean;
   vipLevel?: number;
   nameStyle?: string;
+  idColor?: string; 
   bio?: string;
   location?: string;
   gender?: 'male' | 'female';
@@ -47,11 +54,28 @@ export interface User {
   isMuted?: boolean;
   isSpecialId?: boolean;
   isAdmin?: boolean;
+  isAgency?: boolean;
+  agencyBalance?: number;
   isBanned?: boolean;
   banUntil?: string;
   seatIndex?: number;
   status?: string;
-  agencyBalance?: number;
+  activeEmoji?: string; 
+}
+
+export interface LuckyBag {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  roomId: string;
+  roomTitle: string;
+  totalAmount: number;
+  remainingAmount: number;
+  recipientsLimit: number;
+  claimedBy: string[]; 
+  createdAt: any;
+  expiresAt: any;
 }
 
 export interface GlobalAnnouncement {
@@ -62,19 +86,21 @@ export interface GlobalAnnouncement {
   giftIcon: string;
   roomTitle: string;
   roomId: string;
-  type: 'gift' | 'lucky_win';
+  type: 'gift' | 'lucky_win' | 'lucky_bag';
   amount: number;
   timestamp: any;
 }
+
+export type GiftAnimationType = 'pop' | 'fly' | 'full-screen' | 'shake' | 'glow' | 'bounce' | 'rotate' | 'slide-up';
 
 export interface Gift {
   id: string;
   name: string;
   icon: string;
   cost: number;
-  animationType: 'pop' | 'fly' | 'full-screen';
+  animationType: GiftAnimationType;
   isLucky?: boolean;
-  category?: 'popular' | 'exclusive' | 'lucky';
+  category?: 'popular' | 'exclusive' | 'lucky' | 'celebrity' | 'trend';
 }
 
 export interface VIPPackage {
@@ -109,12 +135,17 @@ export interface Room {
   thumbnail: string;
   speakers: User[];
   background: string;
+  isLocked?: boolean;
+  password?: string;
+  micCount?: number; 
+  moderators?: string[]; // مصفوفة لآيديات المشرفين
+  kickedUsers?: string[]; // مصفوفة للمستخدمين المطرودين
 }
 
 export interface LuckyMultiplier {
   label: string;
   value: number;
-  chance: number; // Percentage 0-100
+  chance: number; 
 }
 
 export interface GameSettings {
@@ -128,6 +159,8 @@ export interface GameSettings {
   wheelNormalX: number;   
   slotsSevenX: number;    
   slotsFruitX: number;    
+  availableEmojis?: string[]; 
+  emojiDuration?: number; 
 }
 
 export interface WheelItem {

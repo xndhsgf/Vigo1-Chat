@@ -1,7 +1,8 @@
 {
-  "name": "Copy of Copy of صوت العرب 111111111- Voice Chat",
+  "name": "فيفو لايف: Vivo Livess",
   "description": "تطبيق دردشة صوتية اجتماعي مع غرف تفاعلية، هدايا، وإطارات مميزة.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera"
   ]
 }
